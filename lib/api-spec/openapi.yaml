@@ -1,0 +1,794 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: Lampira Tourism Marketplace API
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: listings
+    description: All tourism service listings
+  - name: categories
+    description: Listing categories
+  - name: bookings
+    description: Booking & reservation management
+  - name: reviews
+    description: Reviews & ratings
+  - name: users
+    description: User & vendor management
+  - name: vendor
+    description: Vendor dashboard operations
+  - name: discover
+    description: Discovery & featured content
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  # ── LISTINGS ──────────────────────────────────────────────────────────────
+  /listings:
+    get:
+      operationId: getListings
+      tags: [listings]
+      summary: List all listings
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: city
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: minPrice
+          in: query
+          schema: { type: number }
+        - name: maxPrice
+          in: query
+          schema: { type: number }
+        - name: rating
+          in: query
+          schema: { type: number }
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 12 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListingPage"
+    post:
+      operationId: createListing
+      tags: [listings]
+      summary: Create a new listing (vendor)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Listing"
+
+  /listings/{id}:
+    get:
+      operationId: getListing
+      tags: [listings]
+      summary: Get a single listing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Listing"
+        "404":
+          description: Not found
+    patch:
+      operationId: updateListing
+      tags: [listings]
+      summary: Update a listing (vendor)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ListingUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Listing"
+    delete:
+      operationId: deleteListing
+      tags: [listings]
+      summary: Delete a listing (vendor)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "204":
+          description: Deleted
+
+  # ── DISCOVER / WOW ENDPOINTS ───────────────────────────────────────────────
+  /discover/featured:
+    get:
+      operationId: getFeaturedListings
+      tags: [discover]
+      summary: Featured destinations (Pahawang, Kiluan, Krakatau, etc.)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Listing"
+
+  /discover/trending:
+    get:
+      operationId: getTrendingListings
+      tags: [discover]
+      summary: Trending listings by booking count
+      parameters:
+        - name: category
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 8 }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Listing"
+
+  /discover/stats:
+    get:
+      operationId: getDiscoverStats
+      tags: [discover]
+      summary: Platform-wide stats (total listings, vendors, bookings)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DiscoverStats"
+
+  /discover/categories-summary:
+    get:
+      operationId: getCategoriesSummary
+      tags: [discover]
+      summary: Count of listings per category
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryCount"
+
+  # ── BOOKINGS ──────────────────────────────────────────────────────────────
+  /bookings:
+    get:
+      operationId: getBookings
+      tags: [bookings]
+      summary: List bookings for authenticated user or vendor
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, cancelled, completed]
+        - name: listingId
+          in: query
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+    post:
+      operationId: createBooking
+      tags: [bookings]
+      summary: Create a new booking
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  /bookings/{id}:
+    get:
+      operationId: getBooking
+      tags: [bookings]
+      summary: Get booking detail
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  /bookings/{id}/status:
+    patch:
+      operationId: updateBookingStatus
+      tags: [bookings]
+      summary: Accept or reject a booking (vendor)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/BookingStatusUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Booking"
+
+  # ── REVIEWS ───────────────────────────────────────────────────────────────
+  /listings/{id}/reviews:
+    get:
+      operationId: getListingReviews
+      tags: [reviews]
+      summary: Get reviews for a listing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Review"
+    post:
+      operationId: createReview
+      tags: [reviews]
+      summary: Leave a review for a listing
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReviewInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Review"
+
+  # ── USERS ────────────────────────────────────────────────────────────────
+  /users/register:
+    post:
+      operationId: registerUser
+      tags: [users]
+      summary: Register as tourist or vendor
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserRegisterInput"
+      responses:
+        "201":
+          description: Registered
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/login:
+    post:
+      operationId: loginUser
+      tags: [users]
+      summary: Login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserLoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+
+  /users/me:
+    get:
+      operationId: getMe
+      tags: [users]
+      summary: Get current user profile
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+    patch:
+      operationId: updateMe
+      tags: [users]
+      summary: Update current user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  # ── VENDOR DASHBOARD ──────────────────────────────────────────────────────
+  /vendor/dashboard:
+    get:
+      operationId: getVendorDashboard
+      tags: [vendor]
+      summary: Vendor analytics overview
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorDashboard"
+
+  /vendor/listings:
+    get:
+      operationId: getVendorListings
+      tags: [vendor]
+      summary: All listings for current vendor
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Listing"
+
+  /vendor/bookings:
+    get:
+      operationId: getVendorBookings
+      tags: [vendor]
+      summary: All bookings for current vendor's listings
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, cancelled, completed]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Booking"
+
+  /vendor/earnings:
+    get:
+      operationId: getVendorEarnings
+      tags: [vendor]
+      summary: Earnings breakdown with commission deduction
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/VendorEarnings"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required: [status]
+
+    # ── LISTING ──────────────────────────────────────────────────────────────
+    Listing:
+      type: object
+      required:
+        - id
+        - vendorId
+        - category
+        - name
+        - description
+        - city
+        - price
+        - currency
+        - status
+        - createdAt
+      properties:
+        id: { type: integer }
+        vendorId: { type: integer }
+        vendorName: { type: ["string", "null"] }
+        category:
+          type: string
+          enum: [transportation, accommodation, restaurant, tour, event, guide, souvenir]
+        name: { type: string }
+        description: { type: string }
+        city: { type: string }
+        address: { type: ["string", "null"] }
+        price: { type: number }
+        currency: { type: string, default: "IDR" }
+        imageUrl: { type: ["string", "null"] }
+        images: { type: array, items: { type: string } }
+        latitude: { type: ["number", "null"] }
+        longitude: { type: ["number", "null"] }
+        avgRating: { type: ["number", "null"] }
+        reviewCount: { type: integer, default: 0 }
+        bookingCount: { type: integer, default: 0 }
+        isFeatured: { type: boolean, default: false }
+        status:
+          type: string
+          enum: [active, inactive, pending_review]
+        metadata: { type: ["object", "null"] }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: ["string", "null"], format: date-time }
+
+    ListingPage:
+      type: object
+      required: [data, total, page, limit]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: "#/components/schemas/Listing"
+        total: { type: integer }
+        page: { type: integer }
+        limit: { type: integer }
+
+    ListingInput:
+      type: object
+      required: [category, name, description, city, price]
+      properties:
+        category:
+          type: string
+          enum: [transportation, accommodation, restaurant, tour, event, guide, souvenir]
+        name: { type: string }
+        description: { type: string }
+        city: { type: string }
+        address: { type: string }
+        price: { type: number }
+        currency: { type: string, default: "IDR" }
+        imageUrl: { type: string }
+        images: { type: array, items: { type: string } }
+        latitude: { type: number }
+        longitude: { type: number }
+        metadata: { type: object }
+
+    ListingUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        description: { type: string }
+        city: { type: string }
+        address: { type: string }
+        price: { type: number }
+        imageUrl: { type: string }
+        images: { type: array, items: { type: string } }
+        latitude: { type: number }
+        longitude: { type: number }
+        status:
+          type: string
+          enum: [active, inactive]
+        metadata: { type: object }
+
+    # ── DISCOVER ─────────────────────────────────────────────────────────────
+    DiscoverStats:
+      type: object
+      required: [totalListings, totalVendors, totalBookings, totalDestinations]
+      properties:
+        totalListings: { type: integer }
+        totalVendors: { type: integer }
+        totalBookings: { type: integer }
+        totalDestinations: { type: integer }
+
+    CategoryCount:
+      type: object
+      required: [category, count]
+      properties:
+        category: { type: string }
+        count: { type: integer }
+        label: { type: string }
+
+    # ── BOOKING ───────────────────────────────────────────────────────────────
+    Booking:
+      type: object
+      required:
+        - id
+        - listingId
+        - userId
+        - status
+        - totalPrice
+        - checkInDate
+        - createdAt
+      properties:
+        id: { type: integer }
+        listingId: { type: integer }
+        listingName: { type: ["string", "null"] }
+        listingImageUrl: { type: ["string", "null"] }
+        listingCategory: { type: ["string", "null"] }
+        userId: { type: integer }
+        userName: { type: ["string", "null"] }
+        userEmail: { type: ["string", "null"] }
+        status:
+          type: string
+          enum: [pending, confirmed, cancelled, completed]
+        totalPrice: { type: number }
+        commissionAmount: { type: ["number", "null"] }
+        guests: { type: integer, default: 1 }
+        checkInDate: { type: string, format: date }
+        checkOutDate: { type: ["string", "null"], format: date }
+        notes: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+
+    BookingInput:
+      type: object
+      required: [listingId, checkInDate, guests]
+      properties:
+        listingId: { type: integer }
+        checkInDate: { type: string, format: date }
+        checkOutDate: { type: string, format: date }
+        guests: { type: integer, minimum: 1 }
+        notes: { type: string }
+
+    BookingStatusUpdate:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [confirmed, cancelled, completed]
+
+    # ── REVIEW ────────────────────────────────────────────────────────────────
+    Review:
+      type: object
+      required: [id, listingId, userId, rating, createdAt]
+      properties:
+        id: { type: integer }
+        listingId: { type: integer }
+        userId: { type: integer }
+        userName: { type: ["string", "null"] }
+        userAvatarUrl: { type: ["string", "null"] }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: ["string", "null"] }
+        createdAt: { type: string, format: date-time }
+
+    ReviewInput:
+      type: object
+      required: [rating]
+      properties:
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        comment: { type: string }
+
+    # ── USER ─────────────────────────────────────────────────────────────────
+    User:
+      type: object
+      required: [id, email, name, role, createdAt]
+      properties:
+        id: { type: integer }
+        email: { type: string }
+        name: { type: string }
+        role:
+          type: string
+          enum: [tourist, vendor, admin]
+        avatarUrl: { type: ["string", "null"] }
+        phone: { type: ["string", "null"] }
+        language: { type: string, default: "id" }
+        vendorProfile: { $ref: "#/components/schemas/VendorProfile" }
+        createdAt: { type: string, format: date-time }
+
+    VendorProfile:
+      type: object
+      properties:
+        businessName: { type: string }
+        businessDescription: { type: string }
+        trustScore: { type: number }
+        isVerified: { type: boolean }
+
+    UserRegisterInput:
+      type: object
+      required: [email, password, name, role]
+      properties:
+        email: { type: string, format: email }
+        password: { type: string, minLength: 6 }
+        name: { type: string }
+        role:
+          type: string
+          enum: [tourist, vendor]
+        phone: { type: string }
+        businessName: { type: string }
+
+    UserLoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string }
+        password: { type: string }
+
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token: { type: string }
+
+    UserUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        phone: { type: string }
+        avatarUrl: { type: string }
+        language: { type: string }
+        businessName: { type: string }
+        businessDescription: { type: string }
+
+    # ── VENDOR DASHBOARD ──────────────────────────────────────────────────────
+    VendorDashboard:
+      type: object
+      required:
+        - totalListings
+        - totalBookings
+        - pendingBookings
+        - totalRevenue
+        - avgRating
+        - recentBookings
+        - bookingsByStatus
+        - monthlyRevenue
+      properties:
+        totalListings: { type: integer }
+        totalBookings: { type: integer }
+        pendingBookings: { type: integer }
+        totalRevenue: { type: number }
+        netRevenue: { type: number }
+        avgRating: { type: number }
+        trustScore: { type: number }
+        recentBookings:
+          type: array
+          items:
+            $ref: "#/components/schemas/Booking"
+        bookingsByStatus:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatusCount"
+        monthlyRevenue:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyRevenue"
+
+    StatusCount:
+      type: object
+      required: [status, count]
+      properties:
+        status: { type: string }
+        count: { type: integer }
+
+    MonthlyRevenue:
+      type: object
+      required: [month, revenue, bookings]
+      properties:
+        month: { type: string }
+        revenue: { type: number }
+        bookings: { type: integer }
+
+    VendorEarnings:
+      type: object
+      required: [grossRevenue, totalCommission, netRevenue, byCategory]
+      properties:
+        grossRevenue: { type: number }
+        totalCommission: { type: number }
+        netRevenue: { type: number }
+        byCategory:
+          type: array
+          items:
+            $ref: "#/components/schemas/CategoryEarning"
+
+    CategoryEarning:
+      type: object
+      required: [category, gross, commission, net, commissionRate]
+      properties:
+        category: { type: string }
+        gross: { type: number }
+        commission: { type: number }
+        net: { type: number }
+        commissionRate: { type: number }

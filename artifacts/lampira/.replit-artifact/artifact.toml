@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Lampira - Tourism Marketplace"
+version = "1.0.0"
+id = "artifacts/lampira"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 18092
+
+[services.development]
+run = "pnpm --filter @workspace/lampira run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/lampira", "run", "build" ]
+publicDir = "artifacts/lampira/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "18092"
+BASE_PATH = "/"
